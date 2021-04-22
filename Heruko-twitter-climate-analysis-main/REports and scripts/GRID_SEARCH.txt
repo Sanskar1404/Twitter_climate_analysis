@@ -1,0 +1,55 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split,\
+    RandomizedSearchCV, GridSearchCV, cross_val_score
+from sklearn import metrics
+from sklearn.metrics import classification_report, confusion_matrix,\
+    f1_score, precision_score, recall_score, accuracy_score
+from sklearn.svm import SVC
+from sklearn import preprocessing
+from sklearn.multiclass import OneVsRestClassifier
+
+Data = pd.read_csv("C:/Users/Um Ar/PycharmProjects/Internship-2/First_processed.csv")
+X = Data["message"]
+Y = Data["sentiment"]
+
+# Splitting the data
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.20, random_state=1103)
+
+# Splitting the data into validation
+X_test, x_val, y_test, y_val = train_test_split(X_test, y_test, test_size=0.5, random_state=1103)
+
+tfidf = TfidfVectorizer(ngram_range=(1, 3), max_features=20000, use_idf=True)
+tfidf.fit_transform(X_train)
+tfidf.fit_transform(x_val)
+
+X_train = tfidf.transform(X_train)
+MinMaxScaler = preprocessing.Normalizer()
+
+X_train = MinMaxScaler.fit_transform(X_train)
+x_val = tfidf.transform(x_val)
+x_val = MinMaxScaler.fit_transform(x_val)
+
+param_grid = {'C': [10, 15, 0.1, 1],
+              'gamma': [1.5, 2, 0.0001, 0.001, 0.1, 1],
+              'kernel': ['rbf', 'poly']}
+
+svm = SVC()
+grid = GridSearchCV(svm, param_grid=param_grid, refit=True, n_jobs=7, verbose=True)
+grid.fit(X_train, y_train)
+predictions = grid.predict(x_val)
+print("ACCURACY SCORE:", metrics.accuracy_score(y_val, predictions))
+print("::::Confusion Matrix::::")
+print(confusion_matrix(y_val, predictions))
+print("\n")
+
+print(":::Classification Report:::")
+print(classification_report(y_val, predictions, target_names=['Class 1', 'Class 2', 'Class 3', 'Class 4']))
+print("\n")
+
+print(pd.crosstab(y_val, predictions, rownames=["Orgnl"], colnames=['Predicted']))
+
+print(grid.best_score_)
+print(grid.best_params_)
+print(grid.error_score)
+
